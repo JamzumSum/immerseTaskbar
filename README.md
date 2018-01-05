@@ -6,4 +6,5 @@ tested on Win10
 
 
 bugs:
-1. chrome extend can close. 
+1. chrome extend may close. (occurs when i'm using google translate) 
+    try: close the application will help. 
