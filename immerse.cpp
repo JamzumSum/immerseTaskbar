@@ -1,18 +1,21 @@
 /*
  *  immerse.cpp
  *
- *  Created on: 2017å¹´12æœˆ10æ—¥
+ *  Created on: 2017-12-10
  *      Author: JamzumSum
  */
-#include <windows.h>
-#include <iostream>
-using namespace std;
-
+#pragma once
+#include "GUI.h"
 #ifndef   ABM_SETSTATE
 #define   ABM_SETSTATE             0x0000000a
 #endif
 
+form frmain("JamzumSum","Settings");
 HWND tray = FindWindow("Shell_TrayWnd", NULL);
+static UINT interval = 500;
+
+void autoHide();
+
 void AutoHideTaskBar(BOOL bHide)
 {
 	LPARAM lParam = bHide ? ABS_AUTOHIDE : ABS_ALWAYSONTOP;
@@ -23,50 +26,62 @@ void AutoHideTaskBar(BOOL bHide)
 	if (apBar.hWnd)
 	{
 		apBar.lParam = lParam;
-		SHAppBarMessage(ABM_SETSTATE, &apBar); //set auto hide
+		SHAppBarMessage(ABM_SETSTATE, &apBar);
 	}
 }
 
-BOOL WINAPI ConsoleHandler(DWORD CEvent)
-{
-	switch(CEvent){
-	case CTRL_C_EVENT:
-		return false;
-	case CTRL_BREAK_EVENT:
-		return false;
-	case CTRL_CLOSE_EVENT:
-		AutoHideTaskBar(false);
-		SetConsoleCtrlHandler((PHANDLER_ROUTINE)ConsoleHandler, false);
-		break;
-	case CTRL_LOGOFF_EVENT:
-		return false;
-	case CTRL_SHUTDOWN_EVENT:
-		return false;
-}
+bool isInt(LPCSTR str) {
+	for (unsigned int i = 0; i < strlen(str);i++) {
+		if (!isdigit(str[i])) return false;
+	}
 	return true;
 }
 
-int main(){
-	if (SetConsoleCtrlHandler((PHANDLER_ROUTINE)ConsoleHandler, TRUE) == 0) {
-		cout << "Hook failure." << endl;
-		return 1;
-	}
-	cout << "Hola.Just enjoy the immersion taskbar. Close the console whenever you wanna close the application." << endl;
-	BOOL flag = true;
-	for (;;) {
-		if (IsZoomed(GetForegroundWindow())) {
-			if (flag) {
-				AutoHideTaskBar(true);
-				flag = false;
-			}
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR szCmdLine, int iCmdShow) {
+	frmain.Event_On_Unload = [](form* me) {
+		AutoHideTaskBar(false);
+	};
+	frmain.create();
+
+	timer hide(&frmain, 500, 
+		[](form* me)
+		{
+			autoHide();
+		},
+	true
+	);
+	Textbox intv(&frmain, 24, 32, 56, 24,"500", false);
+	intv.Event_Text_Change = [](Textbox* me) {
+		if (isInt(me->name)) {
+			interval = atoi(me->name);
+			((timer*)frmain.tab[0])->interval = interval;
 		}
 		else {
-			if (!flag) {
-				AutoHideTaskBar(false);
-				flag = true;
-			}
+			static char r[8];
+			_itoa_s(interval, r, 10);
+			me->name = r;
 		}
-		Sleep(500);
-	}
+	};
+	Label lblintv(&frmain, 24, 32, 112, 40, "´°Ìå¼ì²â¼ä¸ô£º");
+	
+	intv.move(lblintv.x+ lblintv.w+8,lblintv.y-2);
+	//´´½¨
+	intv();lblintv();frmain();
 	return 0;
+}
+
+void autoHide(){
+	static BOOL flag = true;
+	if (IsZoomed(GetForegroundWindow())) {
+		if (flag) {
+			AutoHideTaskBar(true);
+			flag = false;
+		}
+	}
+	else {
+		if (!flag) {
+			AutoHideTaskBar(false);
+			flag = true;
+		}
+	}
 }
